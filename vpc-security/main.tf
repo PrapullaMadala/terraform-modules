@@ -1,3 +1,17 @@
+terraform {
+    required_providers {
+        aws = {
+            source = "hashicorp/aws"
+            version = "~> 3.1.0"
+        }
+    }
+}
+
+provider "aws" {
+  profile  = var.aws_profile
+  region = var.region
+}
+
 # create VPC to launch EC2 instance
 resource "aws_vpc" "my_vpc" {
     cidr_block = var.vpc_cidr
@@ -82,4 +96,63 @@ resource "aws_route_table_association" "private_subnet_assoc" {
   route_table_id = "${aws_default_route_table.private_route.id}"
   subnet_id      = "${aws_subnet.private_subnet.*.id[count.index]}"
   depends_on     = ["aws_default_route_table.private_route", "aws_subnet.private_subnet"]
+}
+
+# Create security group for ssh, web, nagios etc
+resource "aws_security_group" "security_group" {
+  name   = "nagios_security_group"
+  vpc_id = "${aws_vpc.my_vpc.id}"
+}
+
+resource "aws_security_group_rule" "allow-ssh" {
+  from_port         = 22
+  protocol          = "tcp"
+  security_group_id = "${aws_security_group.security_group.id}"
+  to_port           = 22
+  type              = "ingress"
+  cidr_blocks       = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "allow-outbound" {
+  from_port         = 0
+  protocol          = "-1"
+  security_group_id = "${aws_security_group.security_group.id}"
+  to_port           = 0
+  type              = "egress"
+  cidr_blocks       = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "allow-http" {
+  from_port         = 80
+  protocol          = "tcp"
+  security_group_id = "${aws_security_group.security_group.id}"
+  to_port           = 80
+  type              = "ingress"
+  cidr_blocks       = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "allow-https" {
+  from_port         = 443
+  protocol          = "tcp"
+  security_group_id = "${aws_security_group.security_group.id}"
+  to_port           = 443
+  type              = "ingress"
+  cidr_blocks       = ["0.0.0.0/0"]
+}
+resource "aws_security_group_rule" "allow-egress-http" {
+  from_port         = 80
+  protocol          = "tcp"
+  security_group_id = "${aws_security_group.security_group.id}"
+  to_port           = 80
+  type              = "egress"
+  cidr_blocks       = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "allow-egress-https" {
+  from_port         = 443
+  protocol          = "tcp"
+  security_group_id = "${aws_security_group.security_group.id}"
+  to_port           = 443
+  type              = "egress"
+  cidr_blocks       = ["0.0.0.0/0"]
 }
