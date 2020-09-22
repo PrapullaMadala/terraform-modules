@@ -8,8 +8,7 @@ terraform {
 }
 
 provider "aws" {
-  
-  region  = var.region
+  region = var.region
 }
 
 # create VPC to launch EC2 instance
